@@ -1,69 +1,76 @@
-import pytz
+import os
 
-from datetime import datetime
-from flask import Flask, request, render_template, flash, url_for, redirect, session
-from flask_sqlalchemy import SQLAlchemy
+from dotenv import load_dotenv
+from flask import Flask, request, jsonify
 from flask_bcrypt import Bcrypt
+from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required
 from sqlalchemy import or_
 
-tz = pytz.timezone('Asia/Taipei')
-app = Flask(__name__)
-app.secret_key = 'flask_project_secret_key'
+from models import db, Users
 
-#connect SQL
+load_dotenv()  # load .env
+
+app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY')
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+jwt = JWTManager(app)
+
+# connect SQL
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Omar1231@localhost/flask'
-db = SQLAlchemy(app)
+db.init_app(app)
 bcrypt = Bcrypt(app)
 
-class Users(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), unique=True, nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255),  nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(tz))
 
-@app.route("/")
-def home():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    return "登入後的頁面！"
-
-@app.route('/register', methods=['GET', 'POST'])
+@app.route('/register', methods=['POST'])
 def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password = request.form['password']
+    data = request.json
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
 
-        hashed_pw = bcrypt.generate_password_hash(password).decode('utf-8')
-        new_user = Users(username=username, email=email, password_hash=hashed_pw)
+    if not username or not email or not password:
+        return jsonify({'error': 'All fields are required'}), 400
 
-        db.session.add(new_user)
-        db.session.commit()
-        flash('註冊成功!')
-        return  redirect(url_for('login'))
+    if Users.query.filter((Users.username == username) | (Users.email == email)).first():
+        return jsonify({'error': 'username or email are already exists'}), 400
+
+    password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+    new_user = Users(username=username, email=email, password_hash=password_hash)
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({'message': 'User registered successfully'}), 201
 
 
-    return render_template('register.html')
-
-
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['POST'])
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    if not username or not password:
+        return jsonify({'error': 'Username and password required'}), 400
 
-        user = Users.query.filter(or_( Users.username==username,Users.email==username)).first()
+    user = Users.query.filter(or_(Users.username == username, Users.email == username)).first()
+    if not user or not bcrypt.check_password_hash(user.password_hash, password):
+        return jsonify({'error': 'The username or password is invalid'}), 401
 
-        if user and bcrypt.check_password_hash(user.password_hash, password):
-            session['user_id'] = user.id
-            flash('登入成功!')
-            return redirect(url_for('home'))
-        else:
-            flash('帳號或密碼錯誤')
+    token = create_access_token(identity=str(user.id))
+
+    return jsonify({'message': 'Login successful', 'token': token}), 200
 
 
-    return render_template('login.html')
+@app.route('/me', methods=['GET'])
+@jwt_required()
+def get_me():
+    print(request.headers)
+    user_id = get_jwt_identity()
+    user = Users.query.get(user_id)
+    return jsonify({
+        'id': user.id,
+        'username': user.username,
+        'email': user.email
+    })
+
 
 if __name__ == "__main__":
     app.run(debug=True)
