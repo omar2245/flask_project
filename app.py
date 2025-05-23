@@ -1,9 +1,11 @@
 import os
+from datetime import timedelta
 
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required
+from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required, create_refresh_token, \
+    set_refresh_cookies, unset_jwt_cookies
 from sqlalchemy import or_
 
 from models import db, Users
@@ -13,6 +15,8 @@ load_dotenv()  # load .env
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=15)
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 jwt = JWTManager(app)
 
 # connect SQL
@@ -54,15 +58,17 @@ def login():
     if not user or not bcrypt.check_password_hash(user.password_hash, password):
         return jsonify({'error': 'The username or password is invalid'}), 401
 
-    token = create_access_token(identity=str(user.id))
+    access_token = create_access_token(identity=str(user.id))
+    refresh_token = create_refresh_token(identity=str(user.id))
 
-    return jsonify({'message': 'Login successful', 'token': token}), 200
+    resp = jsonify({'access_token': access_token})
+    set_refresh_cookies(resp, refresh_token)
+    return resp, 200
 
 
 @app.route('/me', methods=['GET'])
 @jwt_required()
 def get_me():
-    print(request.headers)
     user_id = get_jwt_identity()
     user = Users.query.get(user_id)
     return jsonify({
@@ -70,6 +76,22 @@ def get_me():
         'username': user.username,
         'email': user.email
     })
+
+
+@app.route('/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh():
+    current_user_id = get_jwt_identity()
+    new_access_token = create_access_token(identity=current_user_id)
+
+    return jsonify({'access_token': new_access_token}), 200
+
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    resp = jsonify({'msg': 'logout successfully'})
+    unset_jwt_cookies(resp)
+    return resp, 200
 
 
 if __name__ == "__main__":
