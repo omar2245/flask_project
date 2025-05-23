@@ -15,6 +15,7 @@ load_dotenv()  # load .env
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+app.config['JWT_TOKEN_LOCATION'] = ['headers', 'cookies']
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=15)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 jwt = JWTManager(app)
@@ -88,10 +89,17 @@ def refresh():
 
 
 @app.route('/logout', methods=['POST'])
+@jwt_required(refresh=True)
 def logout():
     resp = jsonify({'msg': 'logout successfully'})
     unset_jwt_cookies(resp)
     return resp, 200
+
+
+# 測試登入和Refresh token cookie用的
+@app.route('/')
+def test():
+    return 'test'
 
 
 if __name__ == "__main__":
