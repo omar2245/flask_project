@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from models import db
+from . import db
 
 
 class Post(db.Model):
@@ -9,10 +9,10 @@ class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    like = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(), nullable=False)
 
     comments = db.relationship('Comment', backref='post', cascade='all, delete', lazy=True)
+    likes = db.relationship('PostLike', backref='post', cascade='all, delete', lazy=True)
 
 
 class Comment(db.Model):
@@ -22,5 +22,22 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    like = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(), nullable=False)
+
+    likes = db.relationship('CommentLike', backref='comment', cascade='all, delete', lazy=True)
+
+
+class PostLike(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'post_id', name='post_like'),)
+
+
+class CommentLike(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'), nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'comment_id', name='comment_like'),)

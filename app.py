@@ -4,10 +4,12 @@ from datetime import timedelta
 from dotenv import load_dotenv
 from flask import Flask
 from flask_jwt_extended import JWTManager
+from flask_migrate import Migrate
 
+from controllers import bcrypt
 from models import db
-from routes import bcrypt
 from routes.auth_routes import auth_bp
+from routes.post_routes import post_bp
 from routes.user_routes import user_bp
 
 load_dotenv()  # load .env
@@ -23,10 +25,12 @@ jwt = JWTManager(app)
 # connect SQL
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Omar1231@localhost/flask'
 db.init_app(app)
+migrate = Migrate(app, db)
 bcrypt.init_app(app)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)
+app.register_blueprint(post_bp)
 
 
 # 測試登入和Refresh token cookie用的
