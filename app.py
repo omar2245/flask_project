@@ -9,6 +9,7 @@ from flask_migrate import Migrate
 from controllers import bcrypt
 from models import db
 from routes.auth_routes import auth_bp
+from routes.comment_routes import comment_bp
 from routes.post_routes import post_bp
 from routes.user_routes import user_bp
 
@@ -31,6 +32,7 @@ bcrypt.init_app(app)
 app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(post_bp)
+app.register_blueprint(comment_bp)
 
 
 # 測試登入和Refresh token cookie用的
