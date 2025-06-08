@@ -1,7 +1,7 @@
 from flask import request, jsonify
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
-from models import Post, db, Comment, PostLike, CommentLike
+from models import Post, db, Comment, PostLike, CommentLike, User
 
 
 def create_post_controller():
@@ -97,7 +97,7 @@ def get_post_detail_controller(post_id):
                 'created_at': post.created_at.isoformat(),
                 'content': post.content,
                 'likes': len(post.likes),
-                'is_liked': PostLike.query.filter_by(user_id=user_id, post_id=post_id).first(),
+                'is_liked': (PostLike.query.filter_by(user_id=user_id, post_id=post_id).first()) is not None,
                 'comment_count': Comment.query.filter_by(post_id=post.id).count()
             }
         }
@@ -255,12 +255,29 @@ def unlike_post_controller(post_id):
     return jsonify({'status': 'success', 'message': 'Unlike post successfully.'}), 200
 
 
-def get_user_post_liked(post_ids, user_id):
-    if not user_id:
-        return set()
+def get_post_likes_list_controller(post_id):
+    post = db.session.get(Post, post_id)
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+    except ValueError:
+        return jsonify({'status': 'error', 'message': 'Invalid post id or page or limit'}), 400
 
-    likes = PostLike.query.filter(
-        PostLike.user_id == user_id,
-        PostLike.post_id.in_(post_ids)
-    )
-    return set(like.post_id for like in likes)
+    if not post:
+        return jsonify({'status': 'error', 'message': 'Post does not exist'}), 404
+
+    like_query = PostLike.query.filter_by(post_id=post_id).join(User)
+    like_lists = like_query.paginate(page=page, per_page=limit, error_out=False)
+
+    return jsonify({
+        'status': 'success',
+        'page': page,
+        'total': like_lists.total,
+        'data': [
+            {
+                'user_id': like.user.id,
+                'username': like.user.username,
+                'full_name': like.user.full_name
+            } for like in like_lists
+        ]
+    }), 200

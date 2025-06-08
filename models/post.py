@@ -32,6 +32,7 @@ class PostLike(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
 
+    user = db.relationship('User', backref='post_like')
     __table_args__ = (db.UniqueConstraint('user_id', 'post_id', name='post_like'),)
 
 
@@ -40,4 +41,5 @@ class CommentLike(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     comment_id = db.Column(db.Integer, db.ForeignKey('comments.id'), nullable=False)
 
+    user = db.relationship('User', backref='comment_like')
     __table_args__ = (db.UniqueConstraint('user_id', 'comment_id', name='comment_like'),)

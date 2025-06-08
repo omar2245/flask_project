@@ -16,7 +16,8 @@ def get_me_controller():
         'data': {
             'id': user.id,
             'username': user.username,
-            'email': user.email
+            'email': user.email,
+            'full_name': user.full_name
         }
     }), 200
 
@@ -30,6 +31,7 @@ def update_me_controller():
     data = request.json or {}
     new_username = data.get('username')
     new_email = data.get('email')
+    new_full_name = data.get('full_name')
 
     if new_username and User.query.filter(User.username == new_username, User.id != user_id).first():
         return jsonify({'status': 'error', 'message': 'Username has been used'}), 400
@@ -41,6 +43,8 @@ def update_me_controller():
         user.username = new_username
     if new_email:
         user.email = new_email
+    if new_full_name:
+        user.full_name = new_full_name
 
     try:
         db.session.commit()
@@ -63,5 +67,7 @@ def get_user_controller(user_id):
         'status': 'success',
         'data': {
             'id': user.id,
-            'username': user.username}
+            'username': user.username,
+            'full_name': user.full_name
+        }
     })

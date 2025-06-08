@@ -2,7 +2,7 @@ from flask import Blueprint
 from flask_jwt_extended import jwt_required
 
 from controllers.comment_controller import create_comment_controller, update_comment_controller, \
-    delete_comment_controller, like_comment_controller, unlike_comment_controller
+    delete_comment_controller, like_comment_controller, unlike_comment_controller, get_comment_like_list_controller
 
 comment_bp = Blueprint('comments', __name__, url_prefix='/api/v1/comments')
 
@@ -36,3 +36,9 @@ def like_post(comment_id):
 @jwt_required()
 def unlike_post(comment_id):
     return unlike_comment_controller(comment_id)
+
+
+@comment_bp.route('/<int:comment_id>/like', methods=['GET'])
+@jwt_required()
+def get_comment_like_list(comment_id):
+    return get_comment_like_list_controller(comment_id)

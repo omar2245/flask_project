@@ -1,7 +1,7 @@
 from flask import request, jsonify
 from flask_jwt_extended import get_jwt_identity
 
-from models import Comment, Post, CommentLike
+from models import Comment, Post, CommentLike, User
 from models import db
 
 
@@ -134,3 +134,31 @@ def unlike_comment_controller(comment_id):
         return jsonify({'status': 'error', 'message': 'Database error', 'details': str(e)}), 500
 
     return jsonify({'status': 'success', 'message': 'Unlike comment successfully.'}), 200
+
+
+def get_comment_like_list_controller(comment_id):
+    comment = db.session.get(Comment, comment_id)
+    try:
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 10))
+    except ValueError:
+        return jsonify({'status': 'error', 'message': 'Invalid post id or page or limit'}), 400
+
+    if not comment:
+        return jsonify({'status': 'error', 'message': 'Comment does not exist.'}), 404
+
+    like_query = CommentLike.query.filter_by(comment_id=comment_id).join(User)
+    like_lists = like_query.paginate(page=page, per_page=limit, error_out=False)
+
+    return jsonify({
+        'status': 'success',
+        'page': page,
+        'total': like_lists.total,
+        'data': [
+            {
+                'user_id': like.user.id,
+                'username': like.user.username,
+                'full_name': like.user.full_name
+            } for like in like_lists
+        ]
+    })
