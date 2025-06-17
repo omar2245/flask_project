@@ -9,6 +9,7 @@ post_bp = Blueprint('post', __name__, url_prefix='/api/v1/posts')
 
 
 @post_bp.route('', methods=['POST'])
+@jwt_required()
 def create_post():
     return create_post_controller()
 

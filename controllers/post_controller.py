@@ -1,7 +1,10 @@
 from flask import request, jsonify
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+from sqlalchemy import func
 
 from models import Post, db, Comment, PostLike, CommentLike, User
+
+excerpt_length = 100
 
 
 def create_post_controller():
@@ -42,8 +45,7 @@ def get_all_posts_controller():
             'message': 'Invalid page or limit'
         }), 400
 
-    posts_query = Post.query.order_by(Post.created_at.desc())
-    posts = posts_query.paginate(page=page, per_page=limit, error_out=False)
+    posts = Post.query.order_by(Post.created_at.desc()).paginate(page=page, per_page=limit, error_out=False)
 
     # 超過頁數處理
     if page > posts.pages:
@@ -52,18 +54,50 @@ def get_all_posts_controller():
             'message': f'Page {page} exceeds total pages {posts.pages}.'
         }), 400
 
-    # 批量查按過讚的post
+    # 取得目前分頁中的所有貼文 ID，後續用來批量查詢讚和留言數、是否按讚
+    post_ids = [post.id for post in posts.items]
+
+    # 若有登入，查詢使用者對這批貼文中哪些有按讚
     liked_post_ids = set()
     if user_id:
-        post_ids = [post.id for post in posts]  # 目前貼文所有的post id
-
-        # 把pagination後user按讚過的貼文過濾出來
-        # content在SQL語法就切substring
         user_liked_posts = PostLike.query.filter(
             PostLike.user_id == user_id,
             PostLike.post_id.in_(post_ids)
         ).all()
-        liked_post_ids = set(post.post_id for post in user_liked_posts)
+        liked_post_ids = set(pl.post_id for pl in user_liked_posts)
+
+    # 批量查詢每篇貼文的按讚數，回傳成 dict {post_id: likes_count}
+    likes_counts = dict(
+        # SELECT post_id, count(user_id) FROM post_likes
+        db.session.query(PostLike.post_id, func.count(PostLike.user_id))
+        .filter(PostLike.post_id.in_(post_ids))  # WHERE post_id in (1, 2, 3,...)
+        .group_by(PostLike.post_id)  # GROUP BY post_id
+        .all()
+    )  # 把tuple轉dict方便下面跑迴圈對應post_id使用
+
+    comments_counts = dict(
+        db.session.query(Comment.post_id, func.count(Comment.id))
+        .filter(Comment.post_id.in_(post_ids))
+        .group_by(Comment.post_id)
+        .all()
+    )
+
+    result_posts = []
+    for post in posts.items:
+        content_excerpt = post.content_excerpt
+        if len(content_excerpt) == post.excerpt_length:
+            content_excerpt += "..."
+
+        result_posts.append({
+            'id': post.id,
+            'user_id': post.user_id,
+            'content': content_excerpt,
+            'created_at': post.created_at.isoformat(),
+            'username': post.user.username,
+            'likes': likes_counts.get(post.id, 0),
+            'is_liked': post.id in liked_post_ids,
+            'comment_count': comments_counts.get(post.id, 0),
+        })
 
     return jsonify({
         'status': 'success',
@@ -71,17 +105,7 @@ def get_all_posts_controller():
             'page': page,
             'per_page': limit,
             'total_post': posts.total,
-            'posts': [
-                {
-                    'id': post.id,
-                    'user_id': post.user_id,
-                    'content': post.content,  # 不用全部吐回去, 在SQL語法就切 substring
-                    'created_at': post.created_at.isoformat(),
-                    'likes': len(post.likes),
-                    'is_liked': post.id in liked_post_ids,
-                    'comment_count': Comment.query.filter_by(post_id=post.id).count()
-                } for post in posts.items
-            ]
+            'posts': result_posts
         }
     }), 200
 
@@ -284,7 +308,7 @@ def get_post_likes_list_controller(post_id):
 
     like_query = PostLike.query.filter_by(post_id=post_id).join(User)
     like_lists = like_query.paginate(page=page, per_page=limit, error_out=False)
-    
+
     if page > like_lists.pages:
         return jsonify({
             'status': 'error',

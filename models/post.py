@@ -1,5 +1,8 @@
 from datetime import datetime
 
+from sqlalchemy import func
+from sqlalchemy.ext.hybrid import hybrid_property
+
 from . import db
 
 
@@ -11,8 +14,19 @@ class Post(db.Model):
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(), nullable=False)
 
+    user = db.relationship('User', backref='posts')
     comments = db.relationship('Comment', backref='post', cascade='all, delete', lazy=True)
     likes = db.relationship('PostLike', backref='post', cascade='all, delete', lazy=True)
+
+    excerpt_length = 100
+
+    @hybrid_property
+    def content_excerpt(self):
+        return self.content[:self.excerpt_length]
+
+    @content_excerpt.expression
+    def content_excerpt(self):
+        return func.substring(self.content, 1, self.excerpt_length)
 
 
 class Comment(db.Model):

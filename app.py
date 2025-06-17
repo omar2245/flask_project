@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from dotenv import load_dotenv
 from flask import Flask
+from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 
@@ -22,7 +23,7 @@ app.config['JWT_TOKEN_LOCATION'] = ['headers', 'cookies']
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1500)  # 測試方便記得改回來
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 jwt = JWTManager(app)
-
+CORS(app)
 # connect SQL
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Omar1231@localhost/flask'
 db.init_app(app)
