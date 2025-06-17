@@ -45,12 +45,20 @@ def get_all_posts_controller():
     posts_query = Post.query.order_by(Post.created_at.desc())
     posts = posts_query.paginate(page=page, per_page=limit, error_out=False)
 
+    # 超過頁數處理
+    if page > posts.pages:
+        return jsonify({
+            'status': 'error',
+            'message': f'Page {page} exceeds total pages {posts.pages}.'
+        }), 400
+
     # 批量查按過讚的post
     liked_post_ids = set()
     if user_id:
         post_ids = [post.id for post in posts]  # 目前貼文所有的post id
 
         # 把pagination後user按讚過的貼文過濾出來
+        # content在SQL語法就切substring
         user_liked_posts = PostLike.query.filter(
             PostLike.user_id == user_id,
             PostLike.post_id.in_(post_ids)
@@ -61,12 +69,13 @@ def get_all_posts_controller():
         'status': 'success',
         'data': {
             'page': page,
+            'per_page': limit,
             'total_post': posts.total,
             'posts': [
                 {
                     'id': post.id,
                     'user_id': post.user_id,
-                    'content': post.content,
+                    'content': post.content,  # 不用全部吐回去, 在SQL語法就切 substring
                     'created_at': post.created_at.isoformat(),
                     'likes': len(post.likes),
                     'is_liked': post.id in liked_post_ids,
@@ -180,6 +189,12 @@ def get_post_comment_controller(post_id):
     comments_query = Comment.query.filter_by(post_id=post_id).order_by(Comment.created_at.desc())
     comments = comments_query.paginate(page=page, per_page=limit, error_out=False)
 
+    if page > comments.pages:
+        return jsonify({
+            'status': 'error',
+            'message': f'Page {page} exceeds total pages {comments.pages}.'
+        }), 400
+
     # 查詢被按讚過的comment
     like_comment_ids = set()
     if user_id:
@@ -196,6 +211,7 @@ def get_post_comment_controller(post_id):
         'status': 'success',
         'data': {
             'page': page,
+            'per_page': limit,
             'total': comments.total,
             'comments': [
                 {
@@ -268,10 +284,17 @@ def get_post_likes_list_controller(post_id):
 
     like_query = PostLike.query.filter_by(post_id=post_id).join(User)
     like_lists = like_query.paginate(page=page, per_page=limit, error_out=False)
+    
+    if page > like_lists.pages:
+        return jsonify({
+            'status': 'error',
+            'message': f'Page {page} exceeds total pages {like_lists.pages}.'
+        }), 400
 
     return jsonify({
         'status': 'success',
         'page': page,
+        'per_page': limit,
         'total': like_lists.total,
         'data': [
             {

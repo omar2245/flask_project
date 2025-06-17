@@ -150,6 +150,12 @@ def get_comment_like_list_controller(comment_id):
     like_query = CommentLike.query.filter_by(comment_id=comment_id).join(User)
     like_lists = like_query.paginate(page=page, per_page=limit, error_out=False)
 
+    if page > like_lists.pages:
+        return jsonify({
+            'status': 'error',
+            'message': f'Page {page} exceeds total pages {like_lists.pages}.'
+        }), 400
+    
     return jsonify({
         'status': 'success',
         'page': page,
