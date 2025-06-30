@@ -2,7 +2,7 @@ from flask import request, jsonify
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from sqlalchemy import func
 
-from models import Post, db, Comment, PostLike, CommentLike, User
+from models import Post, db, Comment, PostLikes, CommentLikes, User
 
 excerpt_length = 100
 
@@ -60,18 +60,19 @@ def get_all_posts_controller():
     # 若有登入，查詢使用者對這批貼文中哪些有按讚
     liked_post_ids = set()
     if user_id:
-        user_liked_posts = PostLike.query.filter(
-            PostLike.user_id == user_id,
-            PostLike.post_id.in_(post_ids)
+        user_liked_posts = PostLikes.query.filter(
+            PostLikes.user_id == user_id,
+            PostLikes.post_id.in_(post_ids)
         ).all()
         liked_post_ids = set(pl.post_id for pl in user_liked_posts)
 
     # 批量查詢每篇貼文的按讚數，回傳成 dict {post_id: likes_count}
+    # 量大需要用其他方法
     likes_counts = dict(
         # SELECT post_id, count(user_id) FROM post_likes
-        db.session.query(PostLike.post_id, func.count(PostLike.user_id))
-        .filter(PostLike.post_id.in_(post_ids))  # WHERE post_id in (1, 2, 3,...)
-        .group_by(PostLike.post_id)  # GROUP BY post_id
+        db.session.query(PostLikes.post_id, func.count(PostLikes.user_id))
+        .filter(PostLikes.post_id.in_(post_ids))  # WHERE post_id in (1, 2, 3,...)
+        .group_by(PostLikes.post_id)  # GROUP BY post_id
         .all()
     )  # 把tuple轉dict方便下面跑迴圈對應post_id使用
 
@@ -129,8 +130,9 @@ def get_post_detail_controller(post_id):
                 'user_id': post.user_id,
                 'created_at': post.created_at.isoformat(),
                 'content': post.content,
+                'username': post.user.username,
                 'likes': len(post.likes),
-                'is_liked': (PostLike.query.filter_by(user_id=user_id, post_id=post_id).first()) is not None,
+                'is_liked': (PostLikes.query.filter_by(user_id=user_id, post_id=post_id).first()) is not None,
                 'comment_count': Comment.query.filter_by(post_id=post.id).count()
             }
         }
@@ -213,20 +215,14 @@ def get_post_comment_controller(post_id):
     comments_query = Comment.query.filter_by(post_id=post_id).order_by(Comment.created_at.desc())
     comments = comments_query.paginate(page=page, per_page=limit, error_out=False)
 
-    if page > comments.pages:
-        return jsonify({
-            'status': 'error',
-            'message': f'Page {page} exceeds total pages {comments.pages}.'
-        }), 400
-
     # 查詢被按讚過的comment
     like_comment_ids = set()
     if user_id:
         comment_ids = [comment.id for comment in comments]
 
-        user_liked_comments = CommentLike.query.filter(
-            CommentLike.user_id == user_id,
-            CommentLike.comment_id.in_(comment_ids)
+        user_liked_comments = CommentLikes.query.filter(
+            CommentLikes.user_id == user_id,
+            CommentLikes.comment_id.in_(comment_ids)
         ).all()
         like_comment_ids = set(comment.comment_id for comment in user_liked_comments)
 
@@ -243,6 +239,7 @@ def get_post_comment_controller(post_id):
                     'user_id': comment.user_id,
                     'content': comment.content,
                     'likes': len(comment.likes),
+                    'username': comment.user.username,
                     'is_liked': comment.id in like_comment_ids,
                     'created_at': comment.created_at.isoformat()
                 } for comment in comments.items
@@ -254,7 +251,7 @@ def get_post_comment_controller(post_id):
 def like_post_controller(post_id):
     user_id = int(get_jwt_identity())
     post = db.session.get(Post, post_id)
-    already_liked = PostLike.query.filter_by(user_id=user_id, post_id=post_id).first()
+    already_liked = PostLikes.query.filter_by(user_id=user_id, post_id=post_id).first()
 
     if not post:
         return jsonify({'status': 'error', 'message': 'post does not exist.'}), 404
@@ -262,7 +259,7 @@ def like_post_controller(post_id):
     if already_liked:
         return jsonify({'status': 'error', 'message': 'Already liked'}), 400
 
-    like = PostLike(user_id=user_id, post_id=post_id)
+    like = PostLikes(user_id=user_id, post_id=post_id)
     db.session.add(like)
 
     try:
@@ -277,7 +274,7 @@ def like_post_controller(post_id):
 def unlike_post_controller(post_id):
     user_id = int(get_jwt_identity())
     post = db.session.get(Post, post_id)
-    like = PostLike.query.filter_by(user_id=user_id, post_id=post_id).first()
+    like = PostLikes.query.filter_by(user_id=user_id, post_id=post_id).first()
 
     if not post:
         return jsonify({'status': 'error', 'message': 'post does not exist.'}), 404
@@ -306,7 +303,7 @@ def get_post_likes_list_controller(post_id):
     if not post:
         return jsonify({'status': 'error', 'message': 'Post does not exist'}), 404
 
-    like_query = PostLike.query.filter_by(post_id=post_id).join(User)
+    like_query = PostLikes.query.filter_by(post_id=post_id).join(User)
     like_lists = like_query.paginate(page=page, per_page=limit, error_out=False)
 
     if page > like_lists.pages:

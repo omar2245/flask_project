@@ -3,7 +3,7 @@ import re
 from flask import request, jsonify
 from flask_jwt_extended import (
     create_access_token, create_refresh_token,
-    set_refresh_cookies, unset_jwt_cookies, get_jwt_identity,
+    unset_jwt_cookies, get_jwt_identity,
     jwt_required
 )
 from sqlalchemy import or_
@@ -57,8 +57,7 @@ def login_controller():
     access_token = create_access_token(identity=str(user.id))
     refresh_token = create_refresh_token(identity=str(user.id))
 
-    resp = jsonify({'access_token': access_token})
-    set_refresh_cookies(resp, refresh_token)
+    resp = jsonify({'access_token': access_token, 'refresh_token': refresh_token})
     return resp, 200
 
 

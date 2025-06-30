@@ -20,10 +20,10 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['JWT_TOKEN_LOCATION'] = ['headers', 'cookies']
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1500)  # 測試方便記得改回來
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=5)  # 測試方便記得改回來
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 jwt = JWTManager(app)
-CORS(app)
+
 # connect SQL
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Omar1231@localhost/flask'
 db.init_app(app)
@@ -34,6 +34,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(post_bp)
 app.register_blueprint(comment_bp)
+CORS(app, supports_credentials=True)
 
 
 # 測試登入和Refresh token cookie用的
