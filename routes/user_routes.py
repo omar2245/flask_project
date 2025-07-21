@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required
 
 from controllers.user_controller import get_user_controller, get_me_controller, update_me_controller, \
     follow_user_controller, unfollow_user_controller, get_following_user_controller, get_user_follower_controller, \
-    get_user_posts_controller, get_follow_stats_controller, is_following_user_controller
+    get_user_posts_controller, get_follow_stats_controller, is_following_user_controller, upload_avatar_controller
 
 user_bp = Blueprint('user', __name__, url_prefix='/api/v1/user')
 
@@ -18,6 +18,12 @@ def get_me():
 @jwt_required()
 def update_me():
     return update_me_controller()
+
+
+@user_bp.route('/me/upload_avatar', methods=['POST'])
+@jwt_required()
+def upload_avatar():
+    return upload_avatar_controller()
 
 
 @user_bp.route('/<int:user_id>', methods=['GET'])

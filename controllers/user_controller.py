@@ -1,3 +1,4 @@
+import cloudinary.uploader
 from flask import request, jsonify
 from flask_jwt_extended import get_jwt_identity
 from sqlalchemy.exc import SQLAlchemyError
@@ -20,7 +21,8 @@ def get_me_controller():
             'username': user.username,
             'email': user.email,
             'full_name': user.full_name,
-            'desc': user.desc
+            'desc': user.desc,
+            'avatar': user.avatar
         }
     }), 200
 
@@ -75,6 +77,7 @@ def get_user_controller(user_id):
             'id': user.id,
             'username': user.username,
             'full_name': user.full_name,
+            'avatar': user.avatar,
             'desc': user.desc
         }
     })
@@ -139,13 +142,14 @@ def get_following_user_controller(user_id):
         limit = request.args.get('per_page', default=10, type=int)
 
         query = (
-            db.session.query(User.id, User.username, User.full_name)
+            db.session.query(User.id, User.username, User.full_name, User.avatar)
             .join(Follow, Follow.following_id == User.id)  # 將following id和user id做連結
             .filter(Follow.follower_id == user_id)
         )
         following_users = query.paginate(page=page, per_page=limit, error_out=False)
 
-        data = [{'id': user_id, 'username': username, 'full_name': full_name} for user_id, username, full_name in
+        data = [{'id': user_id, 'username': username, 'full_name': full_name, 'avatar': avatar} for
+                user_id, username, full_name, avatar in
                 following_users]
 
         return jsonify({
@@ -170,14 +174,15 @@ def get_user_follower_controller(user_id):
         limit = request.args.get('per_page', default=10, type=int)
 
         query = (
-            db.session.query(User.id, User.username, User.full_name)
+            db.session.query(User.id, User.username, User.full_name, User.avatar)
             .join(Follow, Follow.follower_id == User.id)
             .filter(Follow.following_id == user_id)
         )
 
         followers = query.paginate(page=page, per_page=limit, error_out=False)
 
-        data = [{'id': uid, 'username': uname, 'full_name': full_name} for uid, uname, full_name in followers]
+        data = [{'id': uid, 'username': uname, 'full_name': full_name, 'avatar': avatar} for
+                uid, uname, full_name, avatar in followers]
 
         return jsonify({
             'status': 'success',
@@ -226,6 +231,7 @@ def get_user_posts_controller(user_id):
                     'user_id': post.user_id,
                     'username': post.user.username,
                     'content': post.content,
+                    'avatar': post.user.avatar,
                     'created_at': post.created_at.isoformat(),
                     'likes': len(post.likes),
                     'is_liked': post.id in liked_post_ids,
@@ -268,3 +274,48 @@ def is_following_user_controller(target_user_id):
         'data': {"is_followed": bool(is_following)}
 
     }), 200
+
+
+def upload_avatar_controller():
+    user_id = get_jwt_identity()
+    user = db.session.get(User, user_id)
+
+    if not user:
+        return jsonify({'status': 'error', 'message': 'User not found'}), 404
+
+    if 'avatar' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No file part'}), 400
+
+    file = request.files['avatar']
+    if file.filename == '':
+        return jsonify({'status': 'error', 'message': 'No selected file'}), 400
+
+    # 檢查檔案大小
+    file.seek(0, 2)  # 移到檔案尾端
+    file_length = file.tell()  # 取得檔案大小（byte）
+    file.seek(0)  # 重置檔案指標
+
+    max_size = 2 * 1024 * 1024  # 2MB
+    if file_length > max_size:
+        return jsonify({"status": "success", "message": "File is too large. Max size is 2MB."}), 400
+
+    try:
+        result = cloudinary.uploader.upload(
+            file,
+            folder='avatars',
+            public_id=f"user_{user.id}",
+            overwrite=True,
+            transformation=[
+                {"width": 300, "height": 300, "crop": "thumb", "gravity": "face"}
+            ]
+        )
+        print(result)
+        avatar_url = result['secure_url']
+        user.avatar = avatar_url
+        db.session.commit()
+
+        return jsonify({"status": "success", 'message': 'Avatar uploaded', 'data': {'avatar_url': avatar_url}}), 201
+
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500

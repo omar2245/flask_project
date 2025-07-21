@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 
+import cloudinary
 from dotenv import load_dotenv
 from flask import Flask
 from flask_cors import CORS
@@ -22,6 +23,7 @@ app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['JWT_TOKEN_LOCATION'] = ['headers', 'cookies']
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=5)  # 測試方便記得改回來
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 jwt = JWTManager(app)
 
 # connect SQL
@@ -29,6 +31,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Omar1231@localhos
 db.init_app(app)
 migrate = Migrate(app, db)
 bcrypt.init_app(app)
+
+# connect cloudinary
+cloudinary.config(
+    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.getenv('CLOUDINARY_API_KEY'),
+    api_secret=os.getenv('CLOUDINARY_API_SECRET')
+)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)
@@ -44,4 +53,4 @@ def test():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

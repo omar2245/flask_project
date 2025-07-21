@@ -95,6 +95,7 @@ def get_all_posts_controller():
             'content': content_excerpt,
             'created_at': post.created_at.isoformat(),
             'username': post.user.username,
+            'avatar': post.user.avatar,
             'likes': likes_counts.get(post.id, 0),
             'is_liked': post.id in liked_post_ids,
             'comment_count': comments_counts.get(post.id, 0),
@@ -131,6 +132,7 @@ def get_post_detail_controller(post_id):
                 'created_at': post.created_at.isoformat(),
                 'content': post.content,
                 'username': post.user.username,
+                'avatar': post.user.avatar,
                 'likes': len(post.likes),
                 'is_liked': (PostLikes.query.filter_by(user_id=user_id, post_id=post_id).first()) is not None,
                 'comment_count': Comment.query.filter_by(post_id=post.id).count()
@@ -240,6 +242,7 @@ def get_post_comment_controller(post_id):
                     'content': comment.content,
                     'likes': len(comment.likes),
                     'username': comment.user.username,
+                    'avatar': comment.user.avatar,
                     'is_liked': comment.id in like_comment_ids,
                     'created_at': comment.created_at.isoformat()
                 } for comment in comments.items
@@ -321,7 +324,8 @@ def get_post_likes_list_controller(post_id):
             {
                 'user_id': like.user.id,
                 'username': like.user.username,
-                'full_name': like.user.full_name
+                'full_name': like.user.full_name,
+                'avatar': like.user.avatar
             } for like in like_lists
         ]
     }), 200
