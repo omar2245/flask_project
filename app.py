@@ -27,7 +27,7 @@ app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 jwt = JWTManager(app)
 
 # connect SQL
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Omar1231@localhost/flask'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
 db.init_app(app)
 migrate = Migrate(app, db)
 bcrypt.init_app(app)

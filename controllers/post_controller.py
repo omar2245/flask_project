@@ -1,16 +1,18 @@
+import cloudinary.uploader
+from PIL import Image
 from flask import request, jsonify
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from sqlalchemy import func
 
 from models import Post, db, Comment, PostLikes, CommentLikes, User
+from models.post import PostImage
 
 excerpt_length = 100
 
 
 def create_post_controller():
     user_id = get_jwt_identity()
-    data = request.json
-    content = data.get('content')
+    content = request.form.get('content')
 
     if not content or len(content.strip()) == 0:
         return jsonify({
@@ -18,13 +20,53 @@ def create_post_controller():
             'message': 'content is empty'
         }), 400
 
-    new_post = Post(user_id=user_id, content=content)
-    db.session.add(new_post)
+    # 檢查圖片大小和格式
+    image_files = request.files.getlist('images')
+    if image_files:
+        # 限制最多 2 張
+        if len(image_files) > 2:
+            return jsonify({
+                'status': 'error',
+                'message': '最多只能上傳 2 張圖片'
+            }), 400
+
+        # 驗證每一張圖片格式是不是圖片
+        for idx, image_file in enumerate(image_files):
+            if not is_image(image_file):
+                return jsonify({
+                    'status': 'error',
+                    'message': f'第 {idx + 1} 張檔案不是有效圖片格式'
+                }), 400
+    # 處理圖片
     try:
+        new_post = Post(user_id=user_id, content=content)
+        db.session.add(new_post)
+        db.session.flush()
+
+        image_urls = []  # 儲存上傳完成的image url
+        # 上傳圖片
+        for idx, image_file in enumerate(image_files):
+            if image_file and image_file.filename != '':
+                result = cloudinary.uploader.upload(
+                    image_file,
+                    folder="posts",
+                    public_id=f"post_{new_post.id}_{idx}",
+                    transformation=[{"width": 500, "height": 500, "crop": "limit"}],
+                )
+                image_urls.append(result['secure_url'])
+
+        for url in image_urls:
+            post_image = PostImage(post_id=new_post.id, image_url=url)
+            db.session.add(post_image)
+
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return jsonify({'status': 'error', 'message': 'Database error', 'details': str(e)}), 500
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to create post or upload images',
+            'details': str(e)
+        }), 500
 
     return jsonify({
         'status': 'success',
@@ -96,6 +138,7 @@ def get_all_posts_controller():
             'created_at': post.created_at.isoformat(),
             'username': post.user.username,
             'avatar': post.user.avatar,
+            'images': [img.image_url for img in post.images],
             'likes': likes_counts.get(post.id, 0),
             'is_liked': post.id in liked_post_ids,
             'comment_count': comments_counts.get(post.id, 0),
@@ -134,6 +177,7 @@ def get_post_detail_controller(post_id):
                 'username': post.user.username,
                 'avatar': post.user.avatar,
                 'likes': len(post.likes),
+                'images': [img.image_url for img in post.images],
                 'is_liked': (PostLikes.query.filter_by(user_id=user_id, post_id=post_id).first()) is not None,
                 'comment_count': Comment.query.filter_by(post_id=post.id).count()
             }
@@ -329,3 +373,13 @@ def get_post_likes_list_controller(post_id):
             } for like in like_lists
         ]
     }), 200
+
+
+def is_image(file_storage):
+    try:
+        image = Image.open(file_storage.stream)
+        image.verify()  # 驗證圖片有效性
+        file_storage.stream.seek(0)  # 驗證後回復指標
+        return True
+    except (TypeError, OSError):
+        return False

@@ -234,6 +234,7 @@ def get_user_posts_controller(user_id):
                     'avatar': post.user.avatar,
                     'created_at': post.created_at.isoformat(),
                     'likes': len(post.likes),
+                    'images': [img.image_url for img in post.images],
                     'is_liked': post.id in liked_post_ids,
                     'comment_count': len(post.comments)
                 } for post in posts.items

@@ -6,6 +6,12 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from . import db
 
 
+class PostImage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
+    image_url = db.Column(db.String(500), nullable=False)
+
+
 class Post(db.Model):
     __tablename__ = 'posts'
 
@@ -17,6 +23,7 @@ class Post(db.Model):
     user = db.relationship('User', backref='posts')
     comments = db.relationship('Comment', backref='post', cascade='all, delete', lazy=True)
     likes = db.relationship('PostLikes', backref='post', cascade='all, delete', lazy=True)
+    images = db.relationship('PostImage', backref='post', lazy=True, cascade='all, delete-orphan')
 
     excerpt_length = 100
 
@@ -39,7 +46,7 @@ class Comment(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(), nullable=False)
-    
+
     user = db.relationship('User', backref='comment')
     likes = db.relationship('CommentLikes', backref='comment', cascade='all, delete', lazy=True)
 
