@@ -1,0 +1,25 @@
+images:
+  - "gcr.io/$PROJECT_ID/flask_project"
+
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-t", "gcr.io/$PROJECT_ID/flask_project", "."]
+
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/flask_project"]
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        set -e
+        REGION=${_REGION:-us-central1}
+        gcloud run deploy flask-project \
+          --image gcr.io/$PROJECT_ID/flask_project \
+          --region "$REGION" \
+          --platform managed \
+          --allow-unauthenticated
+
+substitutions:
+  _REGION: "us-central1"
