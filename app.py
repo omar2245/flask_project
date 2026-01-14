@@ -27,7 +27,7 @@ app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 jwt = JWTManager(app)
 
 # connect SQL
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI') or os.environ.get('DATABASE_URL')
 db.init_app(app)
 migrate = Migrate(app, db)
 bcrypt.init_app(app)
