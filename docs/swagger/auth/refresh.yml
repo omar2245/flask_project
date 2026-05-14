@@ -1,0 +1,10 @@
+tags:
+  - Auth
+summary: 更新 access token
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 成功回傳新的 access token
+  401:
+    description: refresh token 無效或過期

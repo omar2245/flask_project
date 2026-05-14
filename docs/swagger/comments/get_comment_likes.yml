@@ -1,0 +1,28 @@
+tags:
+  - Comments
+summary: 取得留言按讚使用者列表
+security:
+  - Bearer: []
+parameters:
+  - in: path
+    name: comment_id
+    type: integer
+    required: true
+    description: 留言 ID
+  - in: query
+    name: page
+    type: integer
+    default: 1
+    required: false
+  - in: query
+    name: limit
+    type: integer
+    default: 10
+    required: false
+responses:
+  200:
+    description: 成功取得留言按讚列表
+  401:
+    description: 未登入或 token 無效
+  404:
+    description: 留言不存在

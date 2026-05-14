@@ -1,0 +1,16 @@
+tags:
+  - Users
+summary: 檢查目前使用者是否追蹤指定使用者
+security:
+  - Bearer: []
+parameters:
+  - in: path
+    name: target_user_id
+    type: integer
+    required: true
+    description: 目標使用者 ID
+responses:
+  200:
+    description: 成功回傳追蹤狀態
+  401:
+    description: 未登入或 token 無效

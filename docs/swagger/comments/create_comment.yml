@@ -1,0 +1,28 @@
+tags:
+  - Comments
+summary: 建立留言
+security:
+  - Bearer: []
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [post_id, content]
+      properties:
+        post_id:
+          type: integer
+          example: 1
+        content:
+          type: string
+          example: 這是一則留言
+responses:
+  201:
+    description: 建立留言成功
+  400:
+    description: content 不可為空
+  401:
+    description: 未登入或 token 無效
+  404:
+    description: 貼文不存在

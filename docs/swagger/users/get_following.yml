@@ -1,0 +1,24 @@
+tags:
+  - Users
+summary: 取得使用者正在追蹤的列表
+parameters:
+  - in: path
+    name: user_id
+    type: integer
+    required: true
+    description: 使用者 ID
+  - in: query
+    name: page
+    type: integer
+    default: 1
+    required: false
+  - in: query
+    name: per_page
+    type: integer
+    default: 10
+    required: false
+responses:
+  200:
+    description: 成功取得 following 列表
+  404:
+    description: 使用者不存在

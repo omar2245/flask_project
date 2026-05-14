@@ -1,0 +1,20 @@
+tags:
+  - Comments
+summary: 刪除自己的留言
+security:
+  - Bearer: []
+parameters:
+  - in: path
+    name: comment_id
+    type: integer
+    required: true
+    description: 留言 ID
+responses:
+  200:
+    description: 刪除成功
+  401:
+    description: 未登入或 token 無效
+  403:
+    description: 沒有權限刪除此留言
+  404:
+    description: 留言不存在

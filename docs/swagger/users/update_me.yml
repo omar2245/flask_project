@@ -1,0 +1,33 @@
+tags:
+  - Users
+summary: 更新目前登入使用者資料
+security:
+  - Bearer: []
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      properties:
+        username:
+          type: string
+          example: new_username
+        email:
+          type: string
+          example: new@example.com
+        full_name:
+          type: string
+          example: 王小明
+        desc:
+          type: string
+          example: Backend learner
+responses:
+  200:
+    description: 更新成功
+  400:
+    description: username 或 email 已被使用
+  401:
+    description: 未登入或 token 無效
+  404:
+    description: 使用者不存在

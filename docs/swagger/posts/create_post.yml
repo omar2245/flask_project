@@ -1,0 +1,25 @@
+tags:
+  - Posts
+summary: 建立貼文
+security:
+  - Bearer: []
+consumes:
+  - multipart/form-data
+parameters:
+  - in: formData
+    name: content
+    type: string
+    required: true
+    description: 貼文內容
+  - in: formData
+    name: images
+    type: file
+    required: false
+    description: 貼文圖片，Swagger UI 建議先測單張圖片
+responses:
+  201:
+    description: 建立貼文成功
+  400:
+    description: 欄位錯誤或圖片格式錯誤
+  401:
+    description: 未登入或 token 無效

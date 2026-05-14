@@ -1,0 +1,24 @@
+tags:
+  - Auth
+summary: 使用者登入
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          example: demo@example.com
+        password:
+          type: string
+          example: password123
+responses:
+  200:
+    description: 登入成功，回傳 access token 與 refresh token
+  400:
+    description: 缺少 username 或 password
+  401:
+    description: 帳號或密碼錯誤

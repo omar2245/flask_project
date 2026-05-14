@@ -1,0 +1,14 @@
+tags:
+  - Posts
+summary: 取得貼文詳細資料
+parameters:
+  - in: path
+    name: post_id
+    type: integer
+    required: true
+    description: 貼文 ID
+responses:
+  200:
+    description: 成功取得貼文詳細資料
+  404:
+    description: 貼文不存在

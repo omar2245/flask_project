@@ -1,0 +1,32 @@
+tags:
+  - Comments
+summary: 更新自己的留言
+security:
+  - Bearer: []
+parameters:
+  - in: path
+    name: comment_id
+    type: integer
+    required: true
+    description: 留言 ID
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          example: 更新後的留言
+responses:
+  200:
+    description: 更新成功
+  400:
+    description: content 不可為空
+  401:
+    description: 未登入或 token 無效
+  403:
+    description: 沒有權限更新此留言
+  404:
+    description: 留言不存在

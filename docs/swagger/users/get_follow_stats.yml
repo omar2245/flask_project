@@ -1,0 +1,14 @@
+tags:
+  - Users
+summary: 取得追蹤數與粉絲數
+parameters:
+  - in: path
+    name: user_id
+    type: integer
+    required: true
+    description: 使用者 ID
+responses:
+  200:
+    description: 成功取得追蹤統計
+  404:
+    description: 使用者不存在

@@ -1,0 +1,20 @@
+tags:
+  - Users
+summary: 取消追蹤使用者
+security:
+  - Bearer: []
+parameters:
+  - in: path
+    name: user_id
+    type: integer
+    required: true
+    description: 要取消追蹤的使用者 ID
+responses:
+  200:
+    description: 取消追蹤成功
+  400:
+    description: 不能取消追蹤自己或尚未追蹤
+  401:
+    description: 未登入或 token 無效
+  404:
+    description: 使用者不存在

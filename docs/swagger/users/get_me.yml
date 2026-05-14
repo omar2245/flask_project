@@ -1,0 +1,12 @@
+tags:
+  - Users
+summary: 取得目前登入使用者資料
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 成功取得目前使用者資料
+  401:
+    description: 未登入或 token 無效
+  404:
+    description: 使用者不存在

@@ -1,0 +1,20 @@
+tags:
+  - Users
+summary: 追蹤使用者
+security:
+  - Bearer: []
+parameters:
+  - in: path
+    name: user_id
+    type: integer
+    required: true
+    description: 要追蹤的使用者 ID
+responses:
+  201:
+    description: 追蹤成功
+  400:
+    description: 不能追蹤自己或已經追蹤
+  401:
+    description: 未登入或 token 無效
+  404:
+    description: 使用者不存在

@@ -1,0 +1,28 @@
+tags:
+  - Posts
+summary: 取得貼文按讚使用者列表
+security:
+  - Bearer: []
+parameters:
+  - in: path
+    name: post_id
+    type: integer
+    required: true
+    description: 貼文 ID
+  - in: query
+    name: page
+    type: integer
+    default: 1
+    required: false
+  - in: query
+    name: limit
+    type: integer
+    default: 10
+    required: false
+responses:
+  200:
+    description: 成功取得按讚列表
+  401:
+    description: 未登入或 token 無效
+  404:
+    description: 貼文不存在

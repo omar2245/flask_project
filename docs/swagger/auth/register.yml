@@ -1,0 +1,25 @@
+tags:
+  - Auth
+summary: 使用者註冊
+parameters:
+  - in: body
+    name: body
+    required: true
+    schema:
+      type: object
+      required: [username, email, password]
+      properties:
+        username:
+          type: string
+          example: demo_user
+        email:
+          type: string
+          example: demo@example.com
+        password:
+          type: string
+          example: password123
+responses:
+  201:
+    description: 註冊成功
+  400:
+    description: 欄位缺少、格式錯誤或帳號已存在

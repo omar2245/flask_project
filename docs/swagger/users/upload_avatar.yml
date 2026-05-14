@@ -1,0 +1,22 @@
+tags:
+  - Users
+summary: 上傳使用者頭像
+security:
+  - Bearer: []
+consumes:
+  - multipart/form-data
+parameters:
+  - in: formData
+    name: avatar
+    type: file
+    required: true
+    description: 頭像圖片，最大 2MB
+responses:
+  201:
+    description: 上傳成功
+  400:
+    description: 未選擇檔案或檔案過大
+  401:
+    description: 未登入或 token 無效
+  404:
+    description: 使用者不存在

@@ -1,0 +1,20 @@
+tags:
+  - Posts
+summary: 對貼文按讚
+security:
+  - Bearer: []
+parameters:
+  - in: path
+    name: post_id
+    type: integer
+    required: true
+    description: 貼文 ID
+responses:
+  200:
+    description: 按讚成功
+  400:
+    description: 已經按讚
+  401:
+    description: 未登入或 token 無效
+  404:
+    description: 貼文不存在

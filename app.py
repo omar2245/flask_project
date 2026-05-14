@@ -7,6 +7,7 @@ from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
+from flasgger import Swagger
 
 from controllers import bcrypt
 from models import db
@@ -25,6 +26,40 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=5)  # 測試方便記
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 jwt = JWTManager(app)
+
+# Swagger configuration
+swagger_config = {
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": "apispec",
+            "route": "/apispec.json",
+            "rule_filter": lambda rule: True,
+            "model_filter": lambda tag: True,
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/apidocs/"
+}
+
+swagger_template = {
+    "info": {
+        "title": "Flask Social API",
+        "description": "社群平台後端 API 文件",
+        "version": "1.0.0"
+    },
+    "securityDefinitions": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "請輸入：Bearer <access_token>"
+        }
+    }
+}
+
+Swagger(app, config=swagger_config, template=swagger_template)
 
 # connect SQL
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI') or os.environ.get('DATABASE_URL')
@@ -54,5 +89,5 @@ def test():
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 8080))
-    debug = os.environ.get('FLASK_DEBUG', 'False').lower() in ('1', 'true', 'yes')
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    debug = os.environ.get('FLASK_DEBUG', 'true').lower() in ('1', 'true', 'yes')
+    app.run(host='0.0.0.0', port=port, debug=debug, use_reloader=debug)

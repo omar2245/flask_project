@@ -1,0 +1,10 @@
+tags:
+  - Auth
+summary: 使用者登出
+security:
+  - Bearer: []
+responses:
+  200:
+    description: 登出成功
+  401:
+    description: refresh token 無效或過期
