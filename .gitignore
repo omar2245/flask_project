@@ -11,6 +11,9 @@ migrations/
 # Flask secrets
 .env
 
+# Local agent notes
+AGENT.md
+
 # VSCode
 .vscode/
 
