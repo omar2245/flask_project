@@ -8,6 +8,8 @@ from fastapi_app.models.user import User
 from fastapi_app.schemas.auth import MessageResponse
 from fastapi_app.schemas.user import (
     FollowStatsResponse,
+    IsFollowingResponse,
+    UserListResponse,
     UserMeResponse,
     UserPublicResponse,
     UserUpdateRequest,
@@ -15,7 +17,10 @@ from fastapi_app.schemas.user import (
 from fastapi_app.services.follow_service import (
     follow_user,
     get_follow,
+    get_followers,
+    get_following,
     get_follow_stats,
+    is_following,
     unfollow_user,
     user_exists,
 )
@@ -198,3 +203,111 @@ def follow_stats(user_id: int, db: Session = Depends(get_db)):
         )
 
     return get_follow_stats(db=db, user_id=user_id)
+
+
+@router.get("/{user_id}/followers", response_model=UserListResponse)
+def get_followers_list(
+    user_id: int,
+    page: int = 1,
+    per_page: int = 10,
+    db: Session = Depends(get_db),
+):
+    if page < 1 or per_page < 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="page and per_page must be greater than 0",
+        )
+
+    if not user_exists(db=db, user_id=user_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    total, users = get_followers(
+        db=db,
+        user_id=user_id,
+        page=page,
+        per_page=per_page,
+    )
+
+    return {
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "data": [
+            {
+                "id": user.id,
+                "username": user.username,
+                "full_name": user.full_name,
+                "avatar": user.avatar,
+            }
+            for user in users
+        ],
+    }
+
+
+@router.get("/{user_id}/following", response_model=UserListResponse)
+def get_following_list(
+    user_id: int,
+    page: int = 1,
+    per_page: int = 10,
+    db: Session = Depends(get_db),
+):
+    if page < 1 or per_page < 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="page and per_page must be greater than 0",
+        )
+
+    if not user_exists(db=db, user_id=user_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    total, users = get_following(
+        db=db,
+        user_id=user_id,
+        page=page,
+        per_page=per_page,
+    )
+
+    return {
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "data": [
+            {
+                "id": user.id,
+                "username": user.username,
+                "full_name": user.full_name,
+                "avatar": user.avatar,
+            }
+            for user in users
+        ],
+    }
+
+
+@router.get("/{user_id}/is-following", response_model=IsFollowingResponse)
+def get_is_following(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.id == user_id:
+        return {"is_following": False}
+
+    if not user_exists(db=db, user_id=user_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    return {
+        "is_following": is_following(
+            db=db,
+            follower_id=current_user.id,
+            following_id=user_id,
+        )
+    }

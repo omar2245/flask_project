@@ -60,5 +60,42 @@ def get_follow_stats(db: Session, user_id: int) -> dict[str, int]:
     }
 
 
+def get_followers(
+    db: Session, user_id: int, page: int, per_page: int
+) -> tuple[int, list[User]]:
+    query = (
+        db.query(User)
+        .join(Follow, Follow.follower_id == User.id)
+        .filter(Follow.following_id == user_id)
+    )
+    total = query.count()
+    users = query.offset((page - 1) * per_page).limit(per_page).all()
+    return total, users
+
+
+def get_following(
+    db: Session, user_id: int, page: int, per_page: int
+) -> tuple[int, list[User]]:
+    query = (
+        db.query(User)
+        .join(Follow, Follow.following_id == User.id)
+        .filter(Follow.follower_id == user_id)
+    )
+    total = query.count()
+    users = query.offset((page - 1) * per_page).limit(per_page).all()
+    return total, users
+
+
+def is_following(db: Session, follower_id: int, following_id: int) -> bool:
+    return (
+        get_follow(
+            db=db,
+            follower_id=follower_id,
+            following_id=following_id,
+        )
+        is not None
+    )
+
+
 def user_exists(db: Session, user_id: int) -> bool:
     return db.get(User, user_id) is not None

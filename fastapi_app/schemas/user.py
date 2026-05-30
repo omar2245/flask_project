@@ -39,3 +39,21 @@ class UserUpdateRequest(BaseModel):
 class FollowStatsResponse(BaseModel):
     followers_count: int
     following_count: int
+
+
+class UserListItemResponse(BaseModel):
+    id: int
+    username: str
+    full_name: str | None
+    avatar: str | None
+
+
+class UserListResponse(BaseModel):
+    page: int
+    per_page: int
+    total: int
+    data: list[UserListItemResponse]
+
+
+class IsFollowingResponse(BaseModel):
+    is_following: bool
