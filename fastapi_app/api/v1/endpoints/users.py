@@ -5,10 +5,19 @@ from sqlalchemy.orm import Session
 from fastapi_app.db.session import get_db
 from fastapi_app.dependencies import get_current_user
 from fastapi_app.models.user import User
+from fastapi_app.schemas.auth import MessageResponse
 from fastapi_app.schemas.user import (
+    FollowStatsResponse,
     UserMeResponse,
     UserPublicResponse,
     UserUpdateRequest,
+)
+from fastapi_app.services.follow_service import (
+    follow_user,
+    get_follow,
+    get_follow_stats,
+    unfollow_user,
+    user_exists,
 )
 from fastapi_app.services.user_service import (
     get_user_by_id,
@@ -92,3 +101,100 @@ def update_me(
         "avatar": updated_user.avatar,
         "desc": updated_user.desc,
     }
+
+
+@router.post("/{user_id}/follow", response_model=MessageResponse)
+def follow(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot follow yourself",
+        )
+
+    if not user_exists(db=db, user_id=user_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    existing_follow = get_follow(
+        db=db,
+        follower_id=current_user.id,
+        following_id=user_id,
+    )
+
+    if existing_follow:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Already followed",
+        )
+
+    try:
+        follow_user(
+            db=db,
+            follower_id=current_user.id,
+            following_id=user_id,
+        )
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error",
+        )
+
+    return {"message": "Follow successfully"}
+
+
+@router.delete("/{user_id}/follow", response_model=MessageResponse)
+def unfollow(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot unfollow yourself",
+        )
+
+    if not user_exists(db=db, user_id=user_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    follow = get_follow(
+        db=db,
+        follower_id=current_user.id,
+        following_id=user_id,
+    )
+
+    if not follow:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are not following this user",
+        )
+
+    try:
+        unfollow_user(db=db, follow=follow)
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error",
+        )
+
+    return {"message": "Unfollow successfully"}
+
+
+@router.get("/{user_id}/follow-stats", response_model=FollowStatsResponse)
+def follow_stats(user_id: int, db: Session = Depends(get_db)):
+    if not user_exists(db=db, user_id=user_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    return get_follow_stats(db=db, user_id=user_id)

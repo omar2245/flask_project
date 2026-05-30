@@ -34,3 +34,8 @@ class UserUpdateRequest(BaseModel):
     email: str | None = Field(default=None, pattern=r"^\S+@\S+\.\S+$")
     full_name: str | None = Field(default=None, max_length=100)
     desc: str | None = Field(default=None, max_length=255)
+
+
+class FollowStatsResponse(BaseModel):
+    followers_count: int
+    following_count: int
