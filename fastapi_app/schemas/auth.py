@@ -43,15 +43,6 @@ class TokenResponse(BaseModel):
     refresh_token: str
 
 
-class UserMeResponse(BaseModel):
-    id: int
-    username: str
-    email: str
-    full_name: str | None
-    avatar: str | None
-    desc: str | None
-
-
 class AccessTokenResponse(BaseModel):
     access_token: str
 

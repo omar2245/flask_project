@@ -4,13 +4,19 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from fastapi_app.models.user import User
-from fastapi_app.schemas.auth import RegisterRequest, LoginRequest
+from fastapi_app.schemas.auth import LoginRequest, RegisterRequest
 
 
 def hash_password(password: str) -> str:
     password_bytes = password.encode("utf-8")
     hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
     return hashed.decode("utf-8")
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    password_bytes = password.encode("utf-8")
+    password_hash_bytes = password_hash.encode("utf-8")
+    return bcrypt.checkpw(password_bytes, password_hash_bytes)
 
 
 def register_user(db: Session, payload: RegisterRequest) -> User:
@@ -59,9 +65,3 @@ def get_user_by_login(db: Session, account: str) -> User | None:
         .filter(or_(User.username == account, User.email == account))
         .first()
     )
-
-
-def verify_password(password: str, password_hash: str) -> bool:
-    password_bytes = password.encode("utf-8")
-    password_hash_bytes = password_hash.encode("utf-8")
-    return bcrypt.checkpw(password_bytes, password_hash_bytes)

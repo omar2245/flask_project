@@ -3,15 +3,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from fastapi_app.db.session import get_db
-from fastapi_app.dependencies import get_current_user, get_refresh_user_id
-from fastapi_app.models.user import User
+from fastapi_app.dependencies import get_refresh_user_id
 from fastapi_app.core.security import create_access_token, create_refresh_token
 from fastapi_app.schemas.auth import (
     MessageResponse,
     RegisterRequest,
     LoginRequest,
     TokenResponse,
-    UserMeResponse,
     AccessTokenResponse,
 )
 from fastapi_app.services.auth_service import (
@@ -68,18 +66,6 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
-    }
-
-
-@router.get("/me", response_model=UserMeResponse)
-def get_me(current_user: User = Depends(get_current_user)):
-    return {
-        "id": current_user.id,
-        "username": current_user.username,
-        "email": current_user.email,
-        "full_name": current_user.full_name,
-        "avatar": current_user.avatar,
-        "desc": current_user.desc,
     }
 
 
