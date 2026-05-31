@@ -3,9 +3,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from fastapi_app.db.session import get_db
-from fastapi_app.dependencies import get_current_user
+from fastapi_app.dependencies import get_current_user, get_optional_current_user_id
+from fastapi_app.models.post import Post
 from fastapi_app.models.user import User
 from fastapi_app.schemas.auth import MessageResponse
+from fastapi_app.schemas.post import PostListResponse
 from fastapi_app.schemas.user import (
     FollowStatsResponse,
     IsFollowingResponse,
@@ -29,11 +31,45 @@ from fastapi_app.services.user_service import (
     get_user_conflict_for_update,
     update_user,
 )
+from fastapi_app.services.post_service import (
+    get_post_comment_counts,
+    get_post_like_counts,
+    get_posts_by_user,
+    get_user_liked_post_ids,
+)
 
 router = APIRouter(
     prefix="/users",
     tags=["users"],
 )
+
+
+def validate_pagination(page: int, per_page: int) -> None:
+    if page < 1 or per_page < 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="page and per_page must be greater than 0",
+        )
+
+
+def serialize_post(
+    post: Post,
+    likes_count: int,
+    comment_count: int,
+    is_liked: bool,
+) -> dict:
+    return {
+        "id": post.id,
+        "user_id": post.user_id,
+        "content": post.content,
+        "created_at": post.created_at,
+        "username": post.user.username,
+        "avatar": post.user.avatar,
+        "images": [image.image_url for image in post.images],
+        "likes": likes_count,
+        "is_liked": is_liked,
+        "comment_count": comment_count,
+    }
 
 
 @router.get("/me", response_model=UserMeResponse)
@@ -212,11 +248,7 @@ def get_followers_list(
     per_page: int = 10,
     db: Session = Depends(get_db),
 ):
-    if page < 1 or per_page < 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="page and per_page must be greater than 0",
-        )
+    validate_pagination(page=page, per_page=per_page)
 
     if not user_exists(db=db, user_id=user_id):
         raise HTTPException(
@@ -254,11 +286,7 @@ def get_following_list(
     per_page: int = 10,
     db: Session = Depends(get_db),
 ):
-    if page < 1 or per_page < 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="page and per_page must be greater than 0",
-        )
+    validate_pagination(page=page, per_page=per_page)
 
     if not user_exists(db=db, user_id=user_id):
         raise HTTPException(
@@ -310,4 +338,51 @@ def get_is_following(
             follower_id=current_user.id,
             following_id=user_id,
         )
+    }
+
+
+@router.get("/{user_id}/posts", response_model=PostListResponse)
+def get_user_posts(
+    user_id: int,
+    page: int = 1,
+    per_page: int = 10,
+    current_user_id: int | None = Depends(get_optional_current_user_id),
+    db: Session = Depends(get_db),
+):
+    validate_pagination(page=page, per_page=per_page)
+
+    if not user_exists(db=db, user_id=user_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    total, posts = get_posts_by_user(
+        db=db,
+        user_id=user_id,
+        page=page,
+        per_page=per_page,
+    )
+    post_ids = [post.id for post in posts]
+    likes_counts = get_post_like_counts(db=db, post_ids=post_ids)
+    comment_counts = get_post_comment_counts(db=db, post_ids=post_ids)
+    liked_post_ids = get_user_liked_post_ids(
+        db=db,
+        user_id=current_user_id,
+        post_ids=post_ids,
+    )
+
+    return {
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "posts": [
+            serialize_post(
+                post=post,
+                likes_count=likes_counts.get(post.id, 0),
+                comment_count=comment_counts.get(post.id, 0),
+                is_liked=post.id in liked_post_ids,
+            )
+            for post in posts
+        ],
     }
