@@ -43,6 +43,11 @@ router = APIRouter(
     tags=["users"],
 )
 
+legacy_router = APIRouter(
+    prefix="/user",
+    tags=["users"],
+)
+
 
 def validate_pagination(page: int, per_page: int) -> None:
     if page < 1 or per_page < 1:
@@ -386,3 +391,65 @@ def get_user_posts(
             for post in posts
         ],
     }
+
+
+legacy_router.add_api_route(
+    "/me",
+    get_me,
+    methods=["GET"],
+    response_model=UserMeResponse,
+)
+legacy_router.add_api_route(
+    "/me",
+    update_me,
+    methods=["PUT"],
+    response_model=UserMeResponse,
+)
+legacy_router.add_api_route(
+    "/{user_id}",
+    get_user,
+    methods=["GET"],
+    response_model=UserPublicResponse,
+)
+legacy_router.add_api_route(
+    "/{user_id}/follow",
+    follow,
+    methods=["POST"],
+    response_model=MessageResponse,
+)
+legacy_router.add_api_route(
+    "/{user_id}/unfollow",
+    unfollow,
+    methods=["DELETE"],
+    response_model=MessageResponse,
+)
+legacy_router.add_api_route(
+    "/{user_id}/following",
+    get_following_list,
+    methods=["GET"],
+    response_model=UserListResponse,
+)
+legacy_router.add_api_route(
+    "/{user_id}/follower",
+    get_followers_list,
+    methods=["GET"],
+    response_model=UserListResponse,
+)
+legacy_router.add_api_route(
+    "/{user_id}/posts",
+    get_user_posts,
+    methods=["GET"],
+    response_model=PostListResponse,
+)
+legacy_router.add_api_route(
+    "/{user_id}/follows/stat",
+    follow_stats,
+    methods=["GET"],
+    response_model=FollowStatsResponse,
+)
+legacy_router.add_api_route(
+    "/{user_id}/is_following",
+    get_is_following,
+    methods=["GET"],
+    response_model=IsFollowingResponse,
+)
