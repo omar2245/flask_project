@@ -93,9 +93,13 @@ def create_post_endpoint(
 def get_posts_endpoint(
     page: int = 1,
     per_page: int = 10,
+    limit: int | None = None,
     current_user_id: int | None = Depends(get_optional_current_user_id),
     db: Session = Depends(get_db),
 ):
+    if limit is not None:
+        per_page = limit
+
     validate_pagination(page=page, per_page=per_page)
 
     total, posts = get_posts(db=db, page=page, per_page=per_page)
@@ -108,19 +112,28 @@ def get_posts_endpoint(
         post_ids=post_ids,
     )
 
+    post_items = [
+        serialize_post(
+            post=post,
+            likes_count=likes_counts.get(post.id, 0),
+            comment_count=comment_counts.get(post.id, 0),
+            is_liked=post.id in liked_post_ids,
+        )
+        for post in posts
+    ]
+
     return {
         "page": page,
         "per_page": per_page,
         "total": total,
-        "posts": [
-            serialize_post(
-                post=post,
-                likes_count=likes_counts.get(post.id, 0),
-                comment_count=comment_counts.get(post.id, 0),
-                is_liked=post.id in liked_post_ids,
-            )
-            for post in posts
-        ],
+        "posts": post_items,
+        "status": "success",
+        "data": {
+            "page": page,
+            "per_page": per_page,
+            "total_post": total,
+            "posts": post_items,
+        },
     }
 
 
@@ -146,14 +159,14 @@ def get_post_detail_endpoint(
         post_ids=[post.id],
     )
 
-    return {
-        "post": serialize_post(
-            post=post,
-            likes_count=likes_counts.get(post.id, 0),
-            comment_count=comment_counts.get(post.id, 0),
-            is_liked=post.id in liked_post_ids,
-        )
-    }
+    post_item = serialize_post(
+        post=post,
+        likes_count=likes_counts.get(post.id, 0),
+        comment_count=comment_counts.get(post.id, 0),
+        is_liked=post.id in liked_post_ids,
+    )
+
+    return {"post": post_item, "status": "success", "data": {"post": post_item}}
 
 
 @router.put("/{post_id}", response_model=MessageResponse)
@@ -220,9 +233,13 @@ def get_post_comments_endpoint(
     post_id: int,
     page: int = 1,
     per_page: int = 10,
+    limit: int | None = None,
     current_user_id: int | None = Depends(get_optional_current_user_id),
     db: Session = Depends(get_db),
 ):
+    if limit is not None:
+        per_page = limit
+
     validate_pagination(page=page, per_page=per_page)
 
     if not get_post_by_id(db=db, post_id=post_id):
@@ -243,24 +260,33 @@ def get_post_comments_endpoint(
         comment_ids=comment_ids,
     )
 
+    comment_items = [
+        {
+            "id": comment.id,
+            "user_id": comment.user_id,
+            "post_id": comment.post_id,
+            "content": comment.content,
+            "likes": len(comment.likes),
+            "username": comment.user.username,
+            "avatar": comment.user.avatar,
+            "is_liked": comment.id in liked_comment_ids,
+            "created_at": comment.created_at,
+        }
+        for comment in comments
+    ]
+
     return {
         "page": page,
         "per_page": per_page,
         "total": total,
-        "comments": [
-            {
-                "id": comment.id,
-                "user_id": comment.user_id,
-                "post_id": comment.post_id,
-                "content": comment.content,
-                "likes": len(comment.likes),
-                "username": comment.user.username,
-                "avatar": comment.user.avatar,
-                "is_liked": comment.id in liked_comment_ids,
-                "created_at": comment.created_at,
-            }
-            for comment in comments
-        ],
+        "comments": comment_items,
+        "status": "success",
+        "data": {
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "comments": comment_items,
+        },
     }
 
 

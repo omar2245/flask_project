@@ -39,6 +39,8 @@ class CommentListResponse(BaseModel):
     per_page: int
     total: int
     comments: list[CommentItemResponse]
+    status: str | None = None
+    data: dict | None = None
 
 
 class CommentCreatedResponse(BaseModel):

@@ -79,7 +79,7 @@ def serialize_post(
 
 @router.get("/me", response_model=UserMeResponse)
 def get_me(current_user: User = Depends(get_current_user)):
-    return {
+    user_data = {
         "id": current_user.id,
         "username": current_user.username,
         "email": current_user.email,
@@ -87,6 +87,8 @@ def get_me(current_user: User = Depends(get_current_user)):
         "avatar": current_user.avatar,
         "desc": current_user.desc,
     }
+
+    return {**user_data, "status": "success", "data": user_data}
 
 
 @router.get("/{user_id}", response_model=UserPublicResponse)
@@ -99,13 +101,15 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
             detail="User not found",
         )
 
-    return {
+    user_data = {
         "id": user.id,
         "username": user.username,
         "full_name": user.full_name,
         "avatar": user.avatar,
         "desc": user.desc,
     }
+
+    return {**user_data, "status": "success", "data": user_data}
 
 
 @router.put("/me", response_model=UserMeResponse)
@@ -139,7 +143,7 @@ def update_me(
             detail="Database error",
         )
 
-    return {
+    user_data = {
         "id": updated_user.id,
         "username": updated_user.username,
         "email": updated_user.email,
@@ -147,6 +151,8 @@ def update_me(
         "avatar": updated_user.avatar,
         "desc": updated_user.desc,
     }
+
+    return {**user_data, "status": "success", "data": user_data}
 
 
 @router.post("/{user_id}/follow", response_model=MessageResponse)
@@ -351,9 +357,13 @@ def get_user_posts(
     user_id: int,
     page: int = 1,
     per_page: int = 10,
+    limit: int | None = None,
     current_user_id: int | None = Depends(get_optional_current_user_id),
     db: Session = Depends(get_db),
 ):
+    if limit is not None:
+        per_page = limit
+
     validate_pagination(page=page, per_page=per_page)
 
     if not user_exists(db=db, user_id=user_id):
@@ -377,19 +387,28 @@ def get_user_posts(
         post_ids=post_ids,
     )
 
+    post_items = [
+        serialize_post(
+            post=post,
+            likes_count=likes_counts.get(post.id, 0),
+            comment_count=comment_counts.get(post.id, 0),
+            is_liked=post.id in liked_post_ids,
+        )
+        for post in posts
+    ]
+
     return {
         "page": page,
         "per_page": per_page,
         "total": total,
-        "posts": [
-            serialize_post(
-                post=post,
-                likes_count=likes_counts.get(post.id, 0),
-                comment_count=comment_counts.get(post.id, 0),
-                is_liked=post.id in liked_post_ids,
-            )
-            for post in posts
-        ],
+        "posts": post_items,
+        "status": "success",
+        "data": {
+            "page": page,
+            "per_page": per_page,
+            "total_post": total,
+            "posts": post_items,
+        },
     }
 
 

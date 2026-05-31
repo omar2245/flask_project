@@ -40,10 +40,14 @@ class PostListResponse(BaseModel):
     per_page: int
     total: int
     posts: list[PostItemResponse]
+    status: str | None = None
+    data: dict | None = None
 
 
 class PostDetailResponse(BaseModel):
     post: PostItemResponse
+    status: str | None = None
+    data: dict | None = None
 
 
 class PostCreatedResponse(BaseModel):

@@ -8,6 +8,8 @@ class UserMeResponse(BaseModel):
     full_name: str | None
     avatar: str | None
     desc: str | None
+    status: str | None = None
+    data: dict | None = None
 
 
 class UserPublicResponse(BaseModel):
@@ -16,6 +18,8 @@ class UserPublicResponse(BaseModel):
     full_name: str | None
     avatar: str | None
     desc: str | None
+    status: str | None = None
+    data: dict | None = None
 
 
 class UserUpdateRequest(BaseModel):
@@ -39,6 +43,8 @@ class UserUpdateRequest(BaseModel):
 class FollowStatsResponse(BaseModel):
     followers_count: int
     following_count: int
+    status: str | None = None
+    data: dict | None = None
 
 
 class UserListItemResponse(BaseModel):
@@ -53,7 +59,10 @@ class UserListResponse(BaseModel):
     per_page: int
     total: int
     data: list[UserListItemResponse]
+    status: str | None = None
 
 
 class IsFollowingResponse(BaseModel):
     is_following: bool
+    status: str | None = None
+    data: dict | None = None
